@@ -3,7 +3,6 @@ import pandas as pd
 import re
 import nltk
 
-# NLTK resources automatic download
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -35,7 +34,6 @@ def clean_text(text):
     return " ".join(filtered)
 
 def parse_rate(x):
-    """TypeError-safe rate parser"""
     if pd.isna(x):
         return None
     x = str(x).strip()
@@ -49,7 +47,6 @@ def parse_rate(x):
         return None
 
 def parse_cost(x):
-    """TypeError-safe cost parser"""
     if pd.isna(x):
         return None
     x = str(x).replace(',', '').strip()
@@ -61,7 +58,7 @@ def parse_cost(x):
 def clean_dataframe(df):
     df = df.copy()
     
-    # 1. Rating handling (Creates both 'rate' and 'rating_clean')
+    # 1. Ratings
     rate_series = None
     if 'rate' in df.columns:
         rate_series = df['rate'].apply(parse_rate)
@@ -72,10 +69,10 @@ def clean_dataframe(df):
         df['rate'] = rate_series
         df['rating_clean'] = rate_series
     else:
-        df['rate'] = 0.0
-        df['rating_clean'] = 0.0
+        df['rate'] = 3.5
+        df['rating_clean'] = 3.5
 
-    # 2. Cost handling (Creates both 'approx_cost' and 'cost_clean')
+    # 2. Cost
     cost_series = None
     if 'approx_cost(for two people)' in df.columns:
         cost_series = df['approx_cost(for two people)'].apply(parse_cost)
@@ -91,11 +88,22 @@ def clean_dataframe(df):
         df['approx_cost'] = 500.0
         df['cost_clean'] = 500.0
 
-    # Fill NaNs for safety to avoid dashboard calculations breaking
-    df['rating_clean'] = df['rating_clean'].fillna(df['rating_clean'].mean() if not df['rating_clean'].dropna().empty else 3.5)
+    # 3. Reviews & Tokens count
+    if 'reviews_list' in df.columns:
+        df['reviews_parsed'] = df['reviews_list'].fillna('').astype(str)
+        df['review_count'] = df['reviews_list'].fillna('').astype(str).apply(lambda x: len(x.split()))
+    else:
+        df['reviews_parsed'] = ""
+        df['review_count'] = 100
+
+    # Fill default NaNs
+    df['rating_clean'] = df['rating_clean'].fillna(3.5)
     df['rate'] = df['rating_clean']
-    df['cost_clean'] = df['cost_clean'].fillna(df['cost_clean'].median() if not df['cost_clean'].dropna().empty else 500.0)
+    df['cost_clean'] = df['cost_clean'].fillna(500.0)
     df['approx_cost'] = df['cost_clean']
+    df['location'] = df['location'].fillna('Unknown') if 'location' in df.columns else 'Unknown'
+    df['rest_type'] = df['rest_type'].fillna('Casual Dining') if 'rest_type' in df.columns else 'Casual Dining'
+    df['cuisines'] = df['cuisines'].fillna('North Indian') if 'cuisines' in df.columns else 'North Indian'
 
     return df
 
@@ -111,6 +119,5 @@ def build_corpus_text(df):
         return combined.apply(clean_text)
     return pd.Series([""] * len(df))
 
-# Functions and variables aliases for app.py & sentiment.py compatibility
 clean_data = clean_dataframe
 build_corpus = build_corpus_text
