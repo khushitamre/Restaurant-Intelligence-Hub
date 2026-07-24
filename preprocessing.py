@@ -3,7 +3,7 @@ import pandas as pd
 import re
 import nltk
 
-# NLTK requirements automatically downloaded
+# Download NLTK resources automatically if missing
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -22,7 +22,9 @@ except LookupError:
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 
-stop_words = set(stopwords.words('english'))
+# Define STOPWORDS clearly so sentiment.py can import it without error
+STOPWORDS = set(stopwords.words('english'))
+stop_words = STOPWORDS
 
 def clean_text(text):
     if not isinstance(text, str):
@@ -30,11 +32,10 @@ def clean_text(text):
     text = text.lower()
     text = re.sub(r'[^a-zA-Z\s]', '', text)
     tokens = word_tokenize(text)
-    filtered = [word for word in tokens if word not in stop_words]
+    filtered = [word for word in tokens if word not in STOPWORDS]
     return " ".join(filtered)
 
 def clean_dataframe(df):
-    # Standard cleanup for Zomato dataset
     df = df.copy()
     if 'rate' in df.columns:
         df['rate'] = df['rate'].astype(str).apply(lambda x: x.split('/')[0].strip() if '/' in x else x)
@@ -56,6 +57,6 @@ def build_corpus_text(df):
         return combined.apply(clean_text)
     return pd.Series([""] * len(df))
 
-# Alias definitions for smooth imports
+# Functions aliases for smooth importing across app.py
 clean_data = clean_dataframe
 build_corpus = build_corpus_text
