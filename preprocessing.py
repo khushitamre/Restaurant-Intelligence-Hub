@@ -60,10 +60,22 @@ def parse_cost(x):
 
 def clean_dataframe(df):
     df = df.copy()
-    if 'rate' in df.columns:
-        df['rate'] = df['rate'].apply(parse_rate)
     
-    # Cost cleanup - both column names added for app.py compatibility
+    # 1. Rating handling (Creates both 'rate' and 'rating_clean')
+    rate_series = None
+    if 'rate' in df.columns:
+        rate_series = df['rate'].apply(parse_rate)
+    elif 'rating_clean' in df.columns:
+        rate_series = df['rating_clean'].apply(parse_rate)
+        
+    if rate_series is not None:
+        df['rate'] = rate_series
+        df['rating_clean'] = rate_series
+    else:
+        df['rate'] = 0.0
+        df['rating_clean'] = 0.0
+
+    # 2. Cost handling (Creates both 'approx_cost' and 'cost_clean')
     cost_series = None
     if 'approx_cost(for two people)' in df.columns:
         cost_series = df['approx_cost(for two people)'].apply(parse_cost)
@@ -79,6 +91,12 @@ def clean_dataframe(df):
         df['approx_cost'] = 500.0
         df['cost_clean'] = 500.0
 
+    # Fill NaNs for safety to avoid dashboard calculations breaking
+    df['rating_clean'] = df['rating_clean'].fillna(df['rating_clean'].mean() if not df['rating_clean'].dropna().empty else 3.5)
+    df['rate'] = df['rating_clean']
+    df['cost_clean'] = df['cost_clean'].fillna(df['cost_clean'].median() if not df['cost_clean'].dropna().empty else 500.0)
+    df['approx_cost'] = df['cost_clean']
+
     return df
 
 def build_corpus_text(df):
@@ -93,5 +111,6 @@ def build_corpus_text(df):
         return combined.apply(clean_text)
     return pd.Series([""] * len(df))
 
+# Functions and variables aliases for app.py & sentiment.py compatibility
 clean_data = clean_dataframe
 build_corpus = build_corpus_text
