@@ -62,10 +62,23 @@ def clean_dataframe(df):
     df = df.copy()
     if 'rate' in df.columns:
         df['rate'] = df['rate'].apply(parse_rate)
+    
+    # Cost cleanup - both column names added for app.py compatibility
+    cost_series = None
     if 'approx_cost(for two people)' in df.columns:
-        df['approx_cost'] = df['approx_cost(for two people)'].apply(parse_cost)
+        cost_series = df['approx_cost(for two people)'].apply(parse_cost)
     elif 'approx_cost' in df.columns:
-        df['approx_cost'] = df['approx_cost'].apply(parse_cost)
+        cost_series = df['approx_cost'].apply(parse_cost)
+    elif 'cost_clean' in df.columns:
+        cost_series = df['cost_clean'].apply(parse_cost)
+
+    if cost_series is not None:
+        df['approx_cost'] = cost_series
+        df['cost_clean'] = cost_series
+    else:
+        df['approx_cost'] = 500.0
+        df['cost_clean'] = 500.0
+
     return df
 
 def build_corpus_text(df):
